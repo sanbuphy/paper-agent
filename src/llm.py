@@ -20,46 +20,10 @@ def get_response_from_llm(
     if msg_history is None:
         msg_history = []  # 如果没有提供历史记录，则初始化为空列表
 
-    # 如果模型是 OpenAI 系列的 GPT-4o 模型之一
-    if model in [
-        "gpt-4o-2024-05-13",
-        "gpt-4o-mini-2024-07-18",
-        "gpt-4o-2024-08-06",
-        "gpt-4o",
-    ]:
-        new_msg_history = msg_history + [{"role": "user", "content": msg}]  # 将用户消息添加到历史记录中
-        response = client.chat.completions.create(
-            model=model,  # 使用的模型名称
-            messages=[
-                {"role": "system", "content": system_message},  # 系统消息
-                *new_msg_history,  # 历史消息记录
-            ],
-            temperature=temperature,  # 生成文本的多样性
-            max_tokens=3000,  # 最大生成的 token 数量
-            n=1,  # 请求生成一个响应
-            stop=None,  # 没有特定的停止条件
-            seed=0,  # 设置随机种子，确保生成的一致性
-        )
-        content = response.choices[0].message.content  # 从响应中提取生成的文本内容
-        new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]  # 更新历史记录
-    elif model == "deepseek-chat":
-        new_msg_history = msg_history + [{"role": "user", "content": msg}]
-        response = client.chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": system_message},
-                *new_msg_history,
-            ],
-            temperature=temperature,
-            max_tokens=3000,
-            n=1,
-            stop=None,
-        )
-        content = response.choices[0].message.content
-        new_msg_history = new_msg_history + [{"role": "assistant", "content": content}]
-    else:
-        raise ValueError(f"Model {model} not supported.")
-
+    new_msg_history = msg_history + [{"role": "user", "content": msg}]  # 将用户消息添加到历史记录中
+    content, new_msg_history = get_openai_response(
+        client, model, system_message, new_msg_history, temperature
+    )
 
     # 如果设置了打印调试信息
     if print_debug:
@@ -88,52 +52,10 @@ def get_batch_responses_from_llm(
     if msg_history is None:
         msg_history = []  # 如果没有提供历史记录，则初始化为空列表
 
-    # 如果指定的模型是 OpenAI 系列的 GPT-4o 模型之一
-    if model in [
-        "gpt-4o-2024-05-13",
-        "gpt-4o-mini-2024-07-18",
-        "gpt-4o-2024-08-06",
-        "gpt-4o",
-    ]:
-        new_msg_history = msg_history + [{"role": "user", "content": msg}]  # 将用户消息添加到历史记录中
-        response = client.chat.completions.create(
-            model=model,  # 使用的模型名称
-            messages=[
-                {"role": "system", "content": system_message},  # 系统消息
-                *new_msg_history,  # 历史消息记录
-            ],
-            temperature=temperature,  # 生成文本的多样性
-            max_tokens=3000,  # 最大生成的 token 数量
-            n=n_responses,  # 请求生成的响应数量
-            stop=None,  # 没有特定的停止条件
-            seed=0,  # 设置随机种子，确保生成的一致性
-        )
-        content = [r.message.content for r in response.choices]  # 从响应中提取生成的文本内容
-        new_msg_history = [
-            new_msg_history + [{"role": "assistant", "content": c}] for c in content  # 将每个响应加入新的历史记录
-        ]
-    elif model == "deepseek-chat":
-        new_msg_history = msg_history + [{"role": "user", "content": msg}]
-        # 实测 deepseek n_responses 参数无效，只能生成一个响应
-        # 如果使用 deepseek-chat 模型，并且报错了，而你找到了这里，恭喜你，你发现了一个 bug！哈哈哈哈
-        response = client.chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": system_message},
-                *new_msg_history,
-            ],
-            temperature=temperature,
-            max_tokens=3000,
-            n=n_responses,
-            stop=None,
-        )
-        content = [r.message.content for r in response.choices]
-        new_msg_history = [
-            new_msg_history + [{"role": "assistant", "content": c}] for c in content
-        ]
-    # 如果模型不在支持的列表中
-    else:
-        raise ValueError(f"Model {model} not supported.")  # 抛出异常，模型不支持
+    new_msg_history = msg_history + [{"role": "user", "content": msg}]  # 将用户消息添加到历史记录中
+    content, new_msg_history = get_openai_batch_responses(
+        client, model, system_message, new_msg_history, temperature, n_responses
+    )
 
     # 如果设置了打印调试信息
     if print_debug:
@@ -147,6 +69,36 @@ def get_batch_responses_from_llm(
 
     return content, new_msg_history  # 返回生成的内容和更新后的消息历史记录
 
+def get_openai_response(client, model, system_message, msg_history, temperature):
+    return call_openai_api(client, model, system_message, msg_history, temperature, n_responses=1)
+
+def get_openai_batch_responses(client, model, system_message, msg_history, temperature, n_responses):
+    return call_openai_api(client, model, system_message, msg_history, temperature, n_responses)
+
+def call_openai_api(client, model, system_message, msg_history, temperature, n_responses):
+    response = client.chat.completions.create(
+        model=model,  # 使用的模型名称
+        messages=[
+            {"role": "system", "content": system_message},  # 系统消息
+            *msg_history,  # 历史消息记录
+        ],
+        temperature=temperature,  # 生成文本的多样性
+        max_tokens=3000,  # 最大生成的 token 数量
+        n=n_responses,  # 请求生成的响应数量
+        stop=None,  # 没有特定的停止条件
+        seed=0,  # 设置随机种子，确保生成的一致性
+    )
+    if n_responses == 1:
+        content = response.choices[0].message.content  # 从响应中提取生成的文本内容
+        new_msg_history = msg_history + [{"role": "assistant", "content": content}]  # 更新历史记录
+        return content, new_msg_history
+    else:
+        content = [r.message.content for r in response.choices]  # 从响应中提取生成的文本内容
+        new_msg_history = [
+            msg_history + [{"role": "assistant", "content": c}] for c in content  # 将每个响应加入新的历史记录
+        ]
+        return content, new_msg_history
+
 def extract_json_between_markers(llm_output):
     # 定义 JSON 开始和结束的标记
     json_start_marker = "```json"
@@ -154,7 +106,7 @@ def extract_json_between_markers(llm_output):
 
     # 找到 JSON 字符串的开始和结束索引
     start_index = llm_output.find(json_start_marker)
-    if start_index != -1:
+    if (start_index != -1):
         start_index += len(json_start_marker)  # 将起始索引移动到标记之后的位置
         end_index = llm_output.find(json_end_marker, start_index)
     else:

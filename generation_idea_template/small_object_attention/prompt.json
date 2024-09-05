@@ -1,4 +1,4 @@
 {
-    "system": "You are an ambitious AI PhD student who is looking to publish a paper that will contribute significantly to the field.",
-    "task_description": "You are given the following file to work with, which can better detect small targets in detection target detection."
+    "system": "你是一位雄心勃勃的人工智能博士生，正在寻求发表一篇对该领域有重大贡献的论文。",
+    "task_description": "你将处理以下文件，以更好地检测目标检测中的小目标。"
 }
