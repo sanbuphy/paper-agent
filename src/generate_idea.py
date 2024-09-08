@@ -123,7 +123,7 @@ def generate_ideas(
             # 将新生成的想法加入存档
             idea_str_archive.append(json.dumps(json_output))
         except Exception as e:
-            print(f"Failed to generate idea: {e}")  # 捕获异常并打印错误信息
+            print(f"Failed to generate idea at generation {_ + 1}: {e}")  # 捕获异常并打印错误信息
             continue
 
     # 保存生成的所有想法到文件
@@ -297,7 +297,7 @@ def check_idea_novelty(
                 papers_str = "\n\n".join(paper_strings)
 
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"Error at iteration {j + 1} for idea {idx}: {e}")
                 continue
 
         idea["novel"] = novel  # 将创新性结果存入想法字典中

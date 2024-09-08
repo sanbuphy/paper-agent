@@ -23,10 +23,10 @@ def handle_rate_limit_and_timeout(func):
             try:
                 return func(*args, **kwargs)
             except Exception as e:
+                print(f"Executing function: {func.__name__}")  # 打印执行的函数名
                 time.sleep(1)  # 使用 time.sleep() 实现延迟重试
-                print(f"Error: {e}. Retrying...")
+                print(f"handle_rate_limit_and_timeout Error: {e}. Retrying...")
     return wrapper
-
 @handle_rate_limit_and_timeout
 def get_response_from_llm(
     msg,  # 用户输入的消息
@@ -132,11 +132,12 @@ def call_llm_api(model, system_message, msg_history, temperature, n_responses):
     response = erniebot.ChatCompletion.create(
         model=model,  # 使用的模型名称
         messages=[
-            {"role": "system", "content": system_message},  # 系统消息
+            {"role": "user", "content": system_message},  # 系统消息
             *msg_history,  # 历史消息记录
         ],
         temperature=temperature,  # 生成文本的多样性
     )
+    print(response)
     if n_responses == 1:
         content = response.choices[0].message.content  # 从响应中提取生成的文本内容
         new_msg_history = msg_history + [{"role": "assistant", "content": content}]  # 更新历史记录
