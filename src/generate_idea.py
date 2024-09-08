@@ -14,12 +14,24 @@ S2_API_KEY = os.getenv("S2_API_KEY")
 
 def generate_ideas(
     base_dir,
-    client,
     model,
     skip_generation=False,
     max_num_generations=20,
     num_reflections=5,
 ):
+    """
+    生成想法的函数
+
+    参数:
+    base_dir (str): 存放实验代码和提示的基础目录
+    model (str): 用于生成想法的LLM模型名称
+    skip_generation (bool): 是否跳过生成过程
+    max_num_generations (int): 最大生成次数
+    num_reflections (int): 反思次数
+
+    返回:
+    List[Dict]: 生成的想法列表
+    """
     # 如果 skip_generation 为真，则跳过生成过程并从文件中加载现有的想法
     if skip_generation:
         try:
@@ -74,7 +86,6 @@ def generate_ideas(
                     prev_ideas_string=prev_ideas_string,
                     num_reflections=num_reflections,
                 ),
-                client=client,
                 model=model,
                 system_message=idea_system_prompt,
                 msg_history=msg_history,
@@ -93,7 +104,6 @@ def generate_ideas(
                         idea_reflection_prompt.format(
                             current_round=j + 2, num_reflections=num_reflections
                         ),
-                        client=client,
                         model=model,
                         system_message=idea_system_prompt,
                         msg_history=msg_history,
@@ -127,6 +137,12 @@ def generate_ideas(
     return ideas  # 返回生成的想法
 
 def on_backoff(details):
+    """
+    退避策略的回调函数
+
+    参数:
+    details (dict): 包含退避详细信息的字典
+    """
     print(
         f"Backing off {details['wait']:0.1f} seconds after {details['tries']} tries "
         f"calling function {details['target'].__name__} at {time.strftime('%X')}"
@@ -136,6 +152,16 @@ def on_backoff(details):
     backoff.expo, requests.exceptions.HTTPError, on_backoff=on_backoff
 )
 def search_for_papers(query, result_limit=10) -> Union[None, List[Dict]]:
+    """
+    查询论文的函数
+
+    参数:
+    query (str): 查询字符串
+    result_limit (int): 返回结果的限制数量
+
+    返回:
+    Union[None, List[Dict]]: 查询到的论文列表或 None
+    """
     # 检查查询字符串是否为空
     if not query:
         return None
@@ -180,10 +206,21 @@ def search_for_papers(query, result_limit=10) -> Union[None, List[Dict]]:
 def check_idea_novelty(
     ideas,  # 需要检查的想法列表
     base_dir,  # 存放实验代码和提示的基础目录
-    client,  # 用于与LLM交互的客户端对象
     model,  # 用于执行查询的LLM模型名称
     max_num_iterations=10,  # 最大迭代次数，默认值为10
 ):
+    """
+    检查想法创新性的函数
+
+    参数:
+    ideas (List[Dict]): 需要检查的想法列表
+    base_dir (str): 存放实验代码和提示的基础目录
+    model (str): 用于执行查询的LLM模型名称
+    max_num_iterations (int): 最大迭代次数，默认值为10
+
+    返回:
+    List[Dict]: 检查后的想法列表
+    """
     # 读取实验代码文件 experiment.py
     with open(osp.join(base_dir, "experiment.py"), "r") as f:
         code = f.read()
@@ -215,7 +252,6 @@ def check_idea_novelty(
                         idea=idea,  # 当前想法
                         last_query_results=papers_str,  # 上一轮查询结果
                     ),
-                    client=client,
                     model=model,
                     system_message=novelty_system_msg.format(
                         num_rounds=max_num_iterations,  # 总轮次

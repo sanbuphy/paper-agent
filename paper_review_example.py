@@ -1,16 +1,11 @@
 from src.perform_review import load_paper, perform_review
 from src.prompt import reviewer_system_prompt_neg, reviewer_system_prompt_base, reviewer_system_prompt_pos
-from openai import OpenAI
 import json
 import os
 
 import pprint
 
-# gpt-4o
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=os.getenv("OPENAI_BASE_URL"))
-
-# deepseek-chat
-deepseek_clinet = OpenAI(api_key=os.getenv('DEEPSEEK_API_KEY'), base_url=os.getenv('DEEPSEEK_BASE_URL'))
+# gpt-4o.getenv('DEEPSEEK_API_KEY'), base_url=os.getenv('DEEPSEEK_BASE_URL'))
 
 # load paper
 text = load_paper("./paper_review_example/attention.pdf")

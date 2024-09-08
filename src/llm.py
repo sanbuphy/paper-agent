@@ -1,28 +1,49 @@
 import backoff
-import openai
 import json
 import os
+import erniebot
 
 from dotenv import load_dotenv, find_dotenv
 _ = load_dotenv(find_dotenv())
 
+# 列出支持的模型
+models = erniebot.Model.list()
+print(models)
+
+# 设置鉴权参数
+erniebot.api_type = "aistudio"
+erniebot.access_token = os.environ["BAIDU_API_KEY"]
+
 # 使用 backoff 库装饰器来处理 API 调用中的速率限制和超时异常，自动重试
-@backoff.on_exception(backoff.expo, (openai.RateLimitError, openai.APITimeoutError))
+@backoff.on_exception(backoff.expo, (erniebot.RateLimitError, erniebot.APITimeoutError))
 def get_response_from_llm(
     msg,  # 用户输入的消息
-    client,  # 用于与 API 交互的客户端对象
     model,  # 指定使用的模型
     system_message,  # 系统消息，用于设定对话上下文
     print_debug=False,  # 是否打印调试信息
     msg_history=None,  # 对话的历史记录
     temperature=0.75,  # 生成的文本的多样性
 ):
+    """
+    从 LLM 获取响应。
+
+    参数:
+    msg (str): 用户输入的消息。
+    model (str): 指定使用的模型。
+    system_message (str): 系统消息，用于设定对话上下文。
+    print_debug (bool): 是否打印调试信息。
+    msg_history (list): 对话的历史记录。
+    temperature (float): 生成的文本的多样性。
+
+    返回:
+    tuple: 生成的内容和更新后的消息历史记录。
+    """
     if msg_history is None:
         msg_history = []  # 如果没有提供历史记录，则初始化为空列表
 
     new_msg_history = msg_history + [{"role": "user", "content": msg}]  # 将用户消息添加到历史记录中
-    content, new_msg_history = get_openai_response(
-        client, model, system_message, new_msg_history, temperature
+    content, new_msg_history = call_llm_api(
+        model, system_message, new_msg_history, temperature, n_responses=1
     )
 
     # 如果设置了打印调试信息
@@ -37,11 +58,10 @@ def get_response_from_llm(
 
     return content, new_msg_history  # 返回生成的内容和更新后的消息历史记录
 
-
-@backoff.on_exception(backoff.expo, (openai.RateLimitError, openai.APITimeoutError))
+# 使用 backoff 库装饰器来处理 API 调用中的速率限制和超时异常，自动重试
+@backoff.on_exception(backoff.expo, (erniebot.RateLimitError, erniebot.APITimeoutError))
 def get_batch_responses_from_llm(
     msg,  # 用户输入的消息
-    client,  # 用于与 API 交互的客户端对象
     model,  # 指定使用的模型
     system_message,  # 系统消息，用于设定对话上下文
     print_debug=False,  # 是否打印调试信息
@@ -49,12 +69,27 @@ def get_batch_responses_from_llm(
     temperature=0.75,  # 生成的文本的多样性
     n_responses=1,  # 需要生成的响应数量
 ):
+    """
+    从 LLM 获取批量响应。
+
+    参数:
+    msg (str): 用户输入的消息。
+    model (str): 指定使用的模型。
+    system_message (str): 系统消息，用于设定对话上下文。
+    print_debug (bool): 是否打印调试信息。
+    msg_history (list): 对话的历史记录。
+    temperature (float): 生成的文本的多样性。
+    n_responses (int): 需要生成的响应数量。
+
+    返回:
+    tuple: 生成的内容和更新后的消息历史记录。
+    """
     if msg_history is None:
         msg_history = []  # 如果没有提供历史记录，则初始化为空列表
 
     new_msg_history = msg_history + [{"role": "user", "content": msg}]  # 将用户消息添加到历史记录中
-    content, new_msg_history = get_openai_batch_responses(
-        client, model, system_message, new_msg_history, temperature, n_responses
+    content, new_msg_history = call_llm_api(
+        model, system_message, new_msg_history, temperature, n_responses
     )
 
     # 如果设置了打印调试信息
@@ -69,14 +104,21 @@ def get_batch_responses_from_llm(
 
     return content, new_msg_history  # 返回生成的内容和更新后的消息历史记录
 
-def get_openai_response(client, model, system_message, msg_history, temperature):
-    return call_openai_api(client, model, system_message, msg_history, temperature, n_responses=1)
+def call_llm_api(model, system_message, msg_history, temperature, n_responses):
+    """
+    调用 LLM API 获取响应。
 
-def get_openai_batch_responses(client, model, system_message, msg_history, temperature, n_responses):
-    return call_openai_api(client, model, system_message, msg_history, temperature, n_responses)
+    参数:
+    model (str): 使用的模型名称。
+    system_message (str): 系统消息。
+    msg_history (list): 历史消息记录。
+    temperature (float): 生成文本的多样性。
+    n_responses (int): 请求生成的响应数量。
 
-def call_openai_api(client, model, system_message, msg_history, temperature, n_responses):
-    response = client.chat.completions.create(
+    返回:
+    tuple: 生成的内容和更新后的消息历史记录。
+    """
+    response = erniebot.ChatCompletion.create(
         model=model,  # 使用的模型名称
         messages=[
             {"role": "system", "content": system_message},  # 系统消息
@@ -100,6 +142,15 @@ def call_openai_api(client, model, system_message, msg_history, temperature, n_r
         return content, new_msg_history
 
 def extract_json_between_markers(llm_output):
+    """
+    从 LLM 输出中提取 JSON 数据。
+
+    参数:
+    llm_output (str): LLM 的输出。
+
+    返回:
+    dict: 解析后的 JSON 对象，如果解析失败则返回 None。
+    """
     # 定义 JSON 开始和结束的标记
     json_start_marker = "```json"
     json_end_marker = "```"

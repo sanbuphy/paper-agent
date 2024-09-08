@@ -1,6 +1,6 @@
 # LLM APIs
 backoff
-openai
+erniebot
 # Viz
 pypdf
 pymupdf4llm

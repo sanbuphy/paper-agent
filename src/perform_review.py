@@ -10,7 +10,6 @@ from src.llm import (
     extract_json_between_markers,
 )
 import pprint
-import openai
 
 from src.prompt import *
 
@@ -67,12 +66,32 @@ def load_paper(pdf_path, num_pages=None, min_size=100):
 
 
 def load_review(path):
+    """
+    从指定路径加载评审内容。
+
+    参数:
+    path (str): 评审文件的路径。
+
+    返回:
+    dict: 加载的评审内容。
+    """
     with open(path, "r") as json_file:
         loaded = json.load(json_file)
     return loaded["review"]
 
 def get_meta_review(model, client, temperature, reviews):
-    # Write a meta-review from a set of individual reviews
+    """
+    从一组单独的评审中生成一个元评审。
+
+    参数:
+    model (str): 使用的语言模型。
+    client (object): 客户端对象，用于与语言模型通信。
+    temperature (float): 温度参数，控制生成文本的随机性。
+    reviews (list): 单独评审的列表。
+
+    返回:
+    dict: 生成的元评审。
+    """
     review_text = ""
     for i, r in enumerate(reviews):
         review_text += f"""
