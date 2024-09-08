@@ -35,7 +35,7 @@ def generate_ideas(
     # 如果 skip_generation 为真，则跳过生成过程并从文件中加载现有的想法
     if skip_generation:
         try:
-            with open(osp.join(base_dir, "ideas.json"), "r") as f:
+            with open(osp.join(base_dir, "ideas.json"), "r", encoding="utf-8") as f:
                 ideas = json.load(f)
             print("Loaded existing ideas:")
             for idea in ideas:
@@ -50,17 +50,17 @@ def generate_ideas(
     idea_str_archive = []
     
     # 从文件中加载种子想法并将其转换为字符串格式
-    with open(osp.join(base_dir, "seed_ideas.json"), "r") as f:
+    with open(osp.join(base_dir, "seed_ideas.json"), "r", encoding="utf-8") as f:
         seed_ideas = json.load(f)
     for seed_idea in seed_ideas:
         idea_str_archive.append(json.dumps(seed_idea))
 
     # 读取包含实验代码的文件内容
-    with open(osp.join(base_dir, "experiment.py"), "r") as f:
+    with open(osp.join(base_dir, "experiment.py"), "r", encoding="utf-8") as f:
         code = f.read()
 
     # 读取包含提示信息的文件内容
-    with open(osp.join(base_dir, "prompt.json"), "r") as f:
+    with open(osp.join(base_dir, "prompt.json"), "r", encoding="utf-8") as f:
         prompt = json.load(f)
 
     # 提取系统提示
@@ -131,8 +131,8 @@ def generate_ideas(
     for idea_str in idea_str_archive:
         ideas.append(json.loads(idea_str))
 
-    with open(osp.join(base_dir, "ideas.json"), "w") as f:
-        json.dump(ideas, f, indent=4)
+    with open(osp.join(base_dir, "ideas.json"), "w", encoding="utf-8") as f:
+        json.dump(ideas, f, indent=4, ensure_ascii=False)
 
     return ideas  # 返回生成的想法
 
@@ -222,11 +222,11 @@ def check_idea_novelty(
     List[Dict]: 检查后的想法列表
     """
     # 读取实验代码文件 experiment.py
-    with open(osp.join(base_dir, "experiment.py"), "r") as f:
+    with open(osp.join(base_dir, "experiment.py"), "r", encoding="utf-8") as f:
         code = f.read()
     
     # 读取提示文件 prompt.json
-    with open(osp.join(base_dir, "prompt.json"), "r") as f:
+    with open(osp.join(base_dir, "prompt.json"), "r", encoding="utf-8") as f:
         prompt = json.load(f)
         task_description = prompt["task_description"]  # 提取任务描述
 
@@ -304,7 +304,7 @@ def check_idea_novelty(
 
     # 将结果保存到 JSON 文件中
     results_file = osp.join(base_dir, "ideas.json")
-    with open(results_file, "w") as f:
-        json.dump(ideas, f, indent=4)
+    with open(results_file, "w", encoding="utf-8") as f:
+        json.dump(ideas, f, indent=4, ensure_ascii=False)
 
     return ideas

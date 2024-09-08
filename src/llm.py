@@ -1,7 +1,7 @@
-import backoff
 import json
 import os
 import erniebot
+import time  # 添加时间模块的导入
 
 from dotenv import load_dotenv, find_dotenv
 _ = load_dotenv(find_dotenv())
@@ -14,8 +14,20 @@ print(models)
 erniebot.api_type = "aistudio"
 erniebot.access_token = os.environ["BAIDU_API_KEY"]
 
-# 使用 backoff 库装饰器来处理 API 调用中的速率限制和超时异常，自动重试
-@backoff.on_exception(backoff.expo, (erniebot.RateLimitError, erniebot.APITimeoutError))
+def handle_rate_limit_and_timeout(func):
+    """
+    装饰器：处理 API 调用中的速率限制和超时异常，自动重试。
+    """
+    def wrapper(*args, **kwargs):
+        while True:
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                time.sleep(1)  # 使用 time.sleep() 实现延迟重试
+                print(f"Error: {e}. Retrying...")
+    return wrapper
+
+@handle_rate_limit_and_timeout
 def get_response_from_llm(
     msg,  # 用户输入的消息
     model,  # 指定使用的模型
@@ -58,8 +70,7 @@ def get_response_from_llm(
 
     return content, new_msg_history  # 返回生成的内容和更新后的消息历史记录
 
-# 使用 backoff 库装饰器来处理 API 调用中的速率限制和超时异常，自动重试
-@backoff.on_exception(backoff.expo, (erniebot.RateLimitError, erniebot.APITimeoutError))
+@handle_rate_limit_and_timeout
 def get_batch_responses_from_llm(
     msg,  # 用户输入的消息
     model,  # 指定使用的模型
@@ -125,10 +136,6 @@ def call_llm_api(model, system_message, msg_history, temperature, n_responses):
             *msg_history,  # 历史消息记录
         ],
         temperature=temperature,  # 生成文本的多样性
-        max_tokens=3000,  # 最大生成的 token 数量
-        n=n_responses,  # 请求生成的响应数量
-        stop=None,  # 没有特定的停止条件
-        seed=0,  # 设置随机种子，确保生成的一致性
     )
     if n_responses == 1:
         content = response.choices[0].message.content  # 从响应中提取生成的文本内容

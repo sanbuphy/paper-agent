@@ -1,7 +1,7 @@
 from src.generate_idea import generate_ideas, check_idea_novelty
 import pprint
 
-model = 'ernie-4.0-turbo-8k'
+model = 'ernie-4.0'
 
 # generate ideas
 # 会自动保存 ideas 的结果到文件中，下次运行时会直接从文件中加载
